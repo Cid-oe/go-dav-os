@@ -58,16 +58,25 @@ func TestByteOffsetToLBA(t *testing.T) {
 		offset       uint64
 		expectedLBA  uint32
 		expectedSecO uint16
+		expectedOK   bool
 	}{
-		{offset: 0, expectedLBA: 0, expectedSecO: 0},
-		{offset: 511, expectedLBA: 0, expectedSecO: 511},
-		{offset: 512, expectedLBA: 1, expectedSecO: 0},
-		{offset: 1025, expectedLBA: 2, expectedSecO: 1},
-		{offset: 20 * 1024 * 1024, expectedLBA: 40960, expectedSecO: 0},
+		{offset: 0, expectedLBA: 0, expectedSecO: 0, expectedOK: true},
+		{offset: 511, expectedLBA: 0, expectedSecO: 511, expectedOK: true},
+		{offset: 512, expectedLBA: 1, expectedSecO: 0, expectedOK: true},
+		{offset: 1025, expectedLBA: 2, expectedSecO: 1, expectedOK: true},
+		{offset: 20 * 1024 * 1024, expectedLBA: 40960, expectedSecO: 0, expectedOK: true},
+		{offset: 0x0FFFFFFF * 512, expectedLBA: 0x0FFFFFFF, expectedSecO: 0, expectedOK: true},
+		{offset: (0x0FFFFFFF + 1) * 512, expectedLBA: 0, expectedSecO: 0, expectedOK: false},
 	}
 
 	for _, tt := range tests {
-		lba, secOff := ByteOffsetToLBA(tt.offset)
+		lba, secOff, ok := ByteOffsetToLBA(tt.offset)
+		if ok != tt.expectedOK {
+			t.Errorf("ByteOffsetToLBA(%d) ok = %v, expected %v", tt.offset, ok, tt.expectedOK)
+		}
+		if !ok {
+			continue
+		}
 		if lba != tt.expectedLBA || secOff != tt.expectedSecO {
 			t.Errorf("ByteOffsetToLBA(%d) = (%d, %d), expected (%d, %d)",
 				tt.offset, lba, secOff, tt.expectedLBA, tt.expectedSecO)
@@ -82,23 +91,29 @@ func TestByteOffsetToLBA(t *testing.T) {
 
 func TestSectorsNeeded(t *testing.T) {
 	tests := []struct {
-		offset   uint64
-		length   uint64
-		expected uint32
+		offset     uint64
+		length     uint64
+		expected   uint32
+		expectedOK bool
 	}{
-		{offset: 0, length: 0, expected: 0},
-		{offset: 0, length: 1, expected: 1},
-		{offset: 0, length: 512, expected: 1},
-		{offset: 0, length: 513, expected: 2},
-		{offset: 100, length: 412, expected: 1}, // byte 100..511 fits in sector 0
-		{offset: 100, length: 413, expected: 2}, // byte 100..512 crosses into sector 1
-		{offset: 511, length: 2, expected: 2},   // byte 511..512 crosses sector boundary
-		{offset: 1024, length: 1024, expected: 2},
+		{offset: 0, length: 0, expected: 0, expectedOK: true},
+		{offset: 0, length: 1, expected: 1, expectedOK: true},
+		{offset: 0, length: 512, expected: 1, expectedOK: true},
+		{offset: 0, length: 513, expected: 2, expectedOK: true},
+		{offset: 100, length: 412, expected: 1, expectedOK: true}, // byte 100..511 fits in sector 0
+		{offset: 100, length: 413, expected: 2, expectedOK: true}, // byte 100..512 crosses into sector 1
+		{offset: 511, length: 2, expected: 2, expectedOK: true},   // byte 511..512 crosses sector boundary
+		{offset: 1024, length: 1024, expected: 2, expectedOK: true},
+		{offset: ^uint64(0), length: 2, expected: 0, expectedOK: false},        // Overflow test
+		{offset: 0, length: 0x100000000 * 512, expected: 0, expectedOK: false}, // uint32 count overflow
 	}
 
 	for _, tt := range tests {
-		got := SectorsNeeded(tt.offset, tt.length)
-		if got != tt.expected {
+		got, ok := SectorsNeeded(tt.offset, tt.length)
+		if ok != tt.expectedOK {
+			t.Errorf("SectorsNeeded(%d, %d) ok = %v, expected %v", tt.offset, tt.length, ok, tt.expectedOK)
+		}
+		if ok && got != tt.expected {
 			t.Errorf("SectorsNeeded(%d, %d) = %d, expected %d", tt.offset, tt.length, got, tt.expected)
 		}
 	}

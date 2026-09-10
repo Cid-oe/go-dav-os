@@ -39,10 +39,14 @@ func PrepareCommandFrame(lba uint32, drive byte, secCount byte, command byte) Co
 }
 
 // ByteOffsetToLBA converts a 64-bit byte offset to sector LBA and sector offset.
-func ByteOffsetToLBA(offset uint64) (lba uint32, sectorOffset uint16) {
-	lba = uint32(offset / SectorSize)
+func ByteOffsetToLBA(offset uint64) (lba uint32, sectorOffset uint16, ok bool) {
+	sector := offset / SectorSize
+	if sector > 0x0FFFFFFF {
+		return 0, 0, false
+	}
+	lba = uint32(sector)
 	sectorOffset = uint16(offset % SectorSize)
-	return lba, sectorOffset
+	return lba, sectorOffset, true
 }
 
 // LBAToByteOffset converts an LBA and within-sector offset to a 64-bit byte offset.
@@ -51,13 +55,20 @@ func LBAToByteOffset(lba uint32, sectorOffset uint16) uint64 {
 }
 
 // SectorsNeeded calculates how many 512-byte sectors are needed to store length bytes starting from offset.
-func SectorsNeeded(offset uint64, length uint64) uint32 {
+func SectorsNeeded(offset uint64, length uint64) (uint32, bool) {
 	if length == 0 {
-		return 0
+		return 0, true
+	}
+	if ^uint64(0)-offset < length-1 {
+		return 0, false
 	}
 	startSector := offset / SectorSize
 	endSector := (offset + length - 1) / SectorSize
-	return uint32(endSector - startSector + 1)
+	count := endSector - startSector + 1
+	if count > 0xFFFFFFFF {
+		return 0, false
+	}
+	return uint32(count), true
 }
 
 // IsStatusBusy returns true if the BSY (Busy) bit (0x80) is set.
