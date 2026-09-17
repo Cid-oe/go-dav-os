@@ -6,6 +6,7 @@ import (
 
 	"github.com/dmarro89/go-dav-os/agent"
 	"github.com/dmarro89/go-dav-os/fs"
+	"github.com/dmarro89/go-dav-os/fs/fat16"
 	"github.com/dmarro89/go-dav-os/serial"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
@@ -997,4 +998,96 @@ func TestStandardizedUsageMessages(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFatOperationsErrorCodes(t *testing.T) {
+	terminal.Init()
+
+	t.Run("fatcreate success", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.StatusOK)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "File created\n" {
+			t.Fatalf("execute got %q, want %q", got, "File created\n")
+		}
+	})
+
+	t.Run("fatcreate not initialized", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetInitializedForTesting(false)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: Not initialized\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: Not initialized\n")
+		}
+	})
+
+	t.Run("fatcreate file already exists", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.ErrFileExists)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: File already exists\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: File already exists\n")
+		}
+	})
+
+	t.Run("fatcreate no free clusters", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.ErrNoFreeClusters)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: No free clusters\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: No free clusters\n")
+		}
+	})
+
+	t.Run("fatcreate root directory full", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.ErrDirectoryFull)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: Root directory full\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: Root directory full\n")
+		}
+	})
+
+	t.Run("fatcreate generic failure", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.ErrDiskIO)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "Failed to create file\n" {
+			t.Fatalf("execute got %q, want %q", got, "Failed to create file\n")
+		}
+	})
+
+	t.Run("fatread not found", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockReadFile(0, fat16.ErrFileNotFound)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatread notfound")
+		execute()
+		if got := terminal.OutputForTesting(); got != "File not found\n" {
+			t.Fatalf("execute got %q, want %q", got, "File not found\n")
+		}
+	})
+
+	t.Run("fatread not initialized", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetInitializedForTesting(false)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatread myfile")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: Not initialized\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: Not initialized\n")
+		}
+	})
 }

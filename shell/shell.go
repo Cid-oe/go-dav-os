@@ -694,9 +694,21 @@ func execute() {
 			idx++
 		}
 
-		if fat16.CreateFile(&fname, &fext, &dataBuf, uint32(idx)) {
+		errCode := fat16.CreateFileWithErr(&fname, &fext, &dataBuf, uint32(idx))
+		switch errCode {
+		case fat16.StatusOK:
 			terminal.Print("File created\n")
-		} else {
+		case fat16.ErrNotInitialized:
+			terminal.Print("FAT16: Not initialized\n")
+		case fat16.ErrFileExists:
+			terminal.Print("FAT16: File already exists\n")
+		case fat16.ErrNoFreeClusters:
+			terminal.Print("FAT16: No free clusters\n")
+		case fat16.ErrDirectoryFull:
+			terminal.Print("FAT16: Root directory full\n")
+		case fat16.ErrInvalidName:
+			terminal.Print("FAT16: Invalid filename\n")
+		default:
 			terminal.Print("Failed to create file\n")
 		}
 		return
@@ -731,9 +743,16 @@ func execute() {
 			fname[i] = c
 		}
 
-		size, ok := fat16.ReadFile(&fname, &fext, &diskBuf)
-		if !ok {
-			terminal.Print("File not found\n")
+		size, errCode := fat16.ReadFileWithErr(&fname, &fext, &diskBuf)
+		if errCode != fat16.StatusOK {
+			switch errCode {
+			case fat16.ErrNotInitialized:
+				terminal.Print("FAT16: Not initialized\n")
+			case fat16.ErrInvalidName:
+				terminal.Print("FAT16: Invalid filename\n")
+			default:
+				terminal.Print("File not found\n")
+			}
 			return
 		}
 
