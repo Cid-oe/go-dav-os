@@ -52,9 +52,15 @@ func maxAvailableEnd() uint64 {
 	return maxEnd
 }
 
-func bitmapBytePtr(off uint64) *byte {
+var bitmapBytePtrFn = defaultBitmapBytePtr
+
+func defaultBitmapBytePtr(off uint64) *byte {
 	// assumes identity mapping / paging off: physical == directly addressable pointer
 	return (*byte)(unsafe.Pointer(uintptr(bitmapPhys) + uintptr(off)))
+}
+
+func bitmapBytePtr(off uint64) *byte {
+	return bitmapBytePtrFn(off)
 }
 
 func bitmapGet(page uint64) bool {
