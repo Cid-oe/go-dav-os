@@ -50,8 +50,6 @@ func maxAvailableEnd() uint64 {
 	return maxEnd
 }
 
-
-
 func bitmapGet(page uint64) bool {
 	byteIdx := page >> 3
 	bit := byte(1 << (page & 7))
