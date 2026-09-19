@@ -69,20 +69,10 @@ func setupTestPFA(t *testing.T) {
 	bitmapBytes = 0
 	scanStart = 0
 	mmapCount = 0
-
-	var backing []byte
-	bitmapBytePtrFn = func(off uint64) *byte {
-		if off >= uint64(len(backing)) {
-			newSize := off + 1024
-			newBacking := make([]byte, newSize)
-			copy(newBacking, backing)
-			backing = newBacking
-		}
-		return &backing[off]
-	}
+	testingBitmapBacking = nil
 
 	t.Cleanup(func() {
-		bitmapBytePtrFn = defaultBitmapBytePtr
+		testingBitmapBacking = nil
 		pfaReady = false
 		totalPages = 0
 		freePages = 0
