@@ -961,6 +961,7 @@ func TestExecuteAgentCommandSuccessPaths(t *testing.T) {
 func TestExecute_BuiltinCommands(t *testing.T) {
 	terminal.Init()
 	fs.Init()
+	fs.SetupMockPFA()
 
 	t.Run("empty input does nothing", func(t *testing.T) {
 		terminal.ResetOutputForTesting()
@@ -1017,6 +1018,26 @@ func TestExecute_BuiltinCommands(t *testing.T) {
 		setLineBuf("echo")
 		execute()
 		want := "\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("echo output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("echo command with leading trailing and repeated whitespace", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("   echo    message   with   spaces   ")
+		execute()
+		want := "message   with   spaces\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("echo output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("echo command with quoted arguments", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("echo \"quoted argument\" 'single quote'")
+		execute()
+		want := "\"quoted argument\" 'single quote'\n"
 		if got := terminal.OutputForTesting(); got != want {
 			t.Fatalf("echo output = %q, expected %q", got, want)
 		}
