@@ -92,8 +92,9 @@ GDT_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/gdt.gox
 TSS_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/tss.gox
 SYSCALL_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/syscall.gox
 
-.PHONY: all kernel iso run run-agent-transport clean docker-build docker-shell docker-run test help
+.PHONY: all kernel iso run run-agent-transport clean docker-image docker-run docker-build-only docker-shell vet test user-hello help
 
+.DEFAULT_GOAL := all
 all: $(ISO_IMAGE)
 
 help:
